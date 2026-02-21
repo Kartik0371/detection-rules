@@ -1,55 +1,74 @@
-name: "[CUSTOM]Push Latest Rules to Elastic Security Space"
+name: "[CUSTOM] Push Latest Rules to Elastic Security Space"
 
 on:
-    push:
-      branches:
-        - main
-      paths:
-        - '**/*.toml'
-    workflow_dispatch:
-      inputs:
-        overwrite:
-            description: 'Overwrite existing rules'
-            required: false
-            default: 'true'
-        overwrite_exceptions:
-            description: 'Overwrite existing exceptions'
-            required: false
-            default: 'true'
-        overwrite_action_connectors:
-            description: 'Overwrite existing action connectors'
-            required: false
-            default: 'true'
-        space:
-            description: 'Kibana space to use (dev or prod)'
-            required: false
-            default: 'dac_production'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.toml'
+  workflow_dispatch:
+    inputs:
+      overwrite:
+        description: 'Overwrite existing rules'
+        type: boolean
+        required: false
+        default: true
+      overwrite_exceptions:
+        description: 'Overwrite existing exceptions'
+        type: boolean
+        required: false
+        default: true
+      overwrite_action_connectors:
+        description: 'Overwrite existing action connectors'
+        type: boolean
+        required: false
+        default: true
+      space:
+        description: 'Kibana space to use (dev or prod)'
+        type: string
+        required: false
+        default: 'dac_production'
 
 jobs:
-    sync-to-production:
-        runs-on: ubuntu-latest
-        env:
-          CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
+  sync-to-production:
+    runs-on: ubuntu-latest
+    env:
+      CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
 
-        steps:
-        - name: Checkout Repository
-          uses: actions/checkout@v4
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-        - name: Set up Python 3.12
-          uses: actions/setup-python@v2
-          with:
-            python-version: '3.12'
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
 
-        - name: Install Dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip cache purge
-            pip install .[dev]
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
 
-        - name: Import Rules to Kibana
-          run: |
-            FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules/ --overwrite -e -ac"
-            python -m detection_rules kibana --space production import-rules $FLAGS
-          env:
-            DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
-            DR_API_KEY: ${{ vars.ELASTIC_APIKEY }}
+    - name: Initialize Custom Rules Configuration
+      run: |
+        echo "Setting up custom rules directory config..."
+        # Create the directory just in case it is completely empty
+        mkdir -p ${{ vars.CUSTOM_RULES_DIR }}/rules
+        # Silently pipe the directory name into the CLI setup wizard to generate the missing file
+        echo "${{ vars.CUSTOM_RULES_DIR }}" | python -m detection_rules custom-rules setup-config
+
+    - name: Import Rules to Kibana
+      env:
+        # The CLI strictly requires all three of these in the environment block
+        DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
+        DR_API_KEY: ${{ secrets.ELASTIC_APIKEY }}
+        CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
+      run: |
+        # Removed the trailing slash after 'rules' to prevent the FileNotFoundError caused by '//'
+        FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules --overwrite -e -ac"
+        
+        # Determine target space: use the manual input if triggered via workflow_dispatch, otherwise default to dac_production
+        TARGET_SPACE="${{ inputs.space || 'dac_production' }}"
+        
+        echo "Pushing rules to Kibana space: $TARGET_SPACE"
+        python -m detection_rules kibana --space "$TARGET_SPACE" import-rules $FLAGS
