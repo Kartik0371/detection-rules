@@ -1,16 +1,23 @@
-name: "[CUSTOM] Manually Sync Rules from Elastic Security to Gitea"
+name: "[CUSTOM] Manually Sync Rules from Elastic Security to GitHub"
 
 on:
   workflow_dispatch:
     inputs:
       pr_sync_rules_from_elastic:
-        description: 'Sync rules from Elastic Security (direct commit (false) vs PR (true))'
+        description: 'Sync rules from Elastic Security (PR vs direct commit)'
+        type: boolean
         required: true
-        default: 'true'
+        default: true
       space:
         description: 'Specify the Kibana space to export rules from'
+        type: string
         required: false
         default: 'default'
+
+# Explicit permissions required for GitHub Actions to push code and create PRs
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   manual-dispatch-sync:
@@ -20,58 +27,46 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python 3.12
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip cache purge
         pip install .[dev]
 
     - name: Export Rules from Elastic Security and Import Rules to TOML
       run: |
-        python -m detection_rules kibana --space "${{ gitea.event.inputs.space }}" export-rules --directory ${{ vars.CUSTOM_RULES_DIR }}/rules/ -s -sv -e -ac
+        python -m detection_rules kibana --space "${{ inputs.space }}" export-rules --directory ${{ vars.CUSTOM_RULES_DIR }}/rules/ -s -sv -e -ac
       env:
         DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
-        DR_API_KEY: ${{ vars.ELASTIC_APIKEY }}
+        DR_API_KEY: ${{ secrets.ELASTIC_APIKEY }} # Securely referenced from Secrets, not Vars
 
     - name: Update Version Lock
       run: |
         python -m detection_rules dev update-lock-versions --force
 
-    - name: Create branch with changes
-      if: gitea.event.inputs.pr_sync_rules_from_elastic == 'true'
-      run: |
-        git config --global user.name 'Gitea Action'
-        git config --global user.email 'action@gitea.io'
-        git checkout -b feature/pulling-from-kibana
-        git add -A
-        git commit -m "Sync rules from Elastic Security" || echo "No changes to commit"
-        git push --set-upstream origin feature/pulling-from-kibana
-
-    - name: Create Gitea PR
-      if: gitea.event.inputs.pr_sync_rules_from_elastic == 'true'
-      uses: infinilabs/gitea-pr@v0
+    # Replaces the manual git branch and infinilabs/gitea-pr steps
+    - name: Create GitHub PR
+      if: ${{ inputs.pr_sync_rules_from_elastic == true }}
+      uses: peter-evans/create-pull-request@v6
       with:
-        url: http://gitea:3000       # Your Gitea instance URL
-        token: ${{ secrets.SECRET_TOKEN }}   # Your Gitea Personal Access Token
-        commit-message: 'Updated from GitHub Actions'  # Optional: Custom commit message
-        committer: 'GitHub Actions <actions@github.com>' # Optional: Custom committer
-        base: 'main'                                # The target branch in Gitea (default: main or master, according to Gitea config)
-        branch: 'feature/pulling-from-kibana'                 # The source branch for the PR (defaults to a generated branch name)
-        title: 'Updating code repository'               # Optional: Custom PR title
-        body: 'This PR was created automatically.'       # Optional: Custom PR body
-        tea_version: 0.10.1
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Sync rules from Elastic Security"
+        title: "Updating code repository"
+        body: "This PR was created automatically from GitHub Actions."
+        branch: "feature/pulling-from-kibana"
+        base: "main"
+        delete-branch: true
+
+    # Replaces the manual direct commit bash script
     - name: Commit Directly to Main
-      if: gitea.event.inputs.pr_sync_rules_from_elastic == 'false'
-      run: |
-        git config --global user.name 'Gitea Action'
-        git config --global user.email 'action@gitea.io'
-        git add -A
-        git commit -m "Sync rules from Elastic Security" || echo "No changes to commit"
-        git push
+      if: ${{ inputs.pr_sync_rules_from_elastic == false }}
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Sync rules from Elastic Security"
+        branch: main
