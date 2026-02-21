@@ -1,0 +1,18 @@
+[metadata]
+creation_date = "2026/02/21"
+maturity = "development"
+updated_date = "2026/02/21"
+
+[rule]
+author = ["customer"]
+description = "This is a rule as code"
+language = "kuery"
+name = "rule from code"
+risk_score = 20
+rule_id = "56406384-715e-4a63-9f28-b6836e439644"
+severity = "low"
+type = "query"
+
+query = '''
+host.hostname:*
+'''
