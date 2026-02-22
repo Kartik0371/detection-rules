@@ -32,8 +32,7 @@ on:
 jobs:
   sync-to-production:
     runs-on: ubuntu-latest
-    env:
-      CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
+    # CRITICAL FIX: The global 'env' block was removed from here.
 
     steps:
     - name: Checkout Repository
@@ -52,22 +51,21 @@ jobs:
     - name: Initialize Custom Rules Configuration
       run: |
         echo "Setting up custom rules directory config..."
-        # Create the directory just in case it is completely empty
         mkdir -p ${{ vars.CUSTOM_RULES_DIR }}/rules
-        # Silently pipe the directory name into the CLI setup wizard to generate the missing file
-        echo "${{ vars.CUSTOM_RULES_DIR }}" | python -m detection_rules custom-rules setup-config
+        
+        # Because CUSTOM_RULES_DIR is not in the environment yet, this will boot successfully and generate the config file.
+        python -m detection_rules custom-rules setup-config ${{ vars.CUSTOM_RULES_DIR }}
 
     - name: Import Rules to Kibana
       env:
-        # The CLI strictly requires all three of these in the environment block
+        # NOW we explicitly inject the variable so the framework uses the config file we just generated.
         DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
         DR_API_KEY: ${{ secrets.ELASTIC_APIKEY }}
         CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
       run: |
-        # Removed the trailing slash after 'rules' to prevent the FileNotFoundError caused by '//'
         FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules --overwrite -e -ac"
         
-        # Determine target space: use the manual input if triggered via workflow_dispatch, otherwise default to dac_production
+        # Determine target space
         TARGET_SPACE="${{ inputs.space || 'dac_production' }}"
         
         echo "Pushing rules to Kibana space: $TARGET_SPACE"
