@@ -1,4 +1,4 @@
-name: "[CUSTOM] Push Latest Rules to Elastic Security Space"
+name: "DaC 3: Push Rules to Elastic Security"
 
 on:
   push:
@@ -8,21 +8,6 @@ on:
       - '**/*.toml'
   workflow_dispatch:
     inputs:
-      overwrite:
-        description: 'Overwrite existing rules'
-        type: boolean
-        required: false
-        default: true
-      overwrite_exceptions:
-        description: 'Overwrite existing exceptions'
-        type: boolean
-        required: false
-        default: true
-      overwrite_action_connectors:
-        description: 'Overwrite existing action connectors'
-        type: boolean
-        required: false
-        default: true
       space:
         description: 'Kibana space to use (dev or prod)'
         type: string
@@ -30,9 +15,12 @@ on:
         default: 'dac_production'
 
 jobs:
-  sync-to-production:
+  import-rules:
     runs-on: ubuntu-latest
-    # CRITICAL FIX: The global 'env' block was removed from here.
+    env:
+      DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
+      DR_API_KEY: ${{ secrets.ELASTIC_APIKEY }}
+      CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
 
     steps:
     - name: Checkout Repository
@@ -48,24 +36,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[dev]
 
-    - name: Initialize Custom Rules Configuration
-      run: |
-        echo "Setting up custom rules directory config..."
-        mkdir -p ${{ vars.CUSTOM_RULES_DIR }}/rules
-        
-        # Because CUSTOM_RULES_DIR is not in the environment yet, this will boot successfully and generate the config file.
-        python -m detection_rules custom-rules setup-config ${{ vars.CUSTOM_RULES_DIR }}
-
     - name: Import Rules to Kibana
-      env:
-        # NOW we explicitly inject the variable so the framework uses the config file we just generated.
-        DR_KIBANA_URL: ${{ vars.KIBANA_URL }}
-        DR_API_KEY: ${{ secrets.ELASTIC_APIKEY }}
-        CUSTOM_RULES_DIR: ${{ vars.CUSTOM_RULES_DIR }}
       run: |
         FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules --overwrite -e -ac"
-        
-        # Determine target space
         TARGET_SPACE="${{ inputs.space || 'dac_production' }}"
         
         echo "Pushing rules to Kibana space: $TARGET_SPACE"
