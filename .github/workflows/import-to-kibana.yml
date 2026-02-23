@@ -15,7 +15,7 @@ on:
         description: 'Kibana space to use'
         type: string
         required: false
-        default: 'dac_production'
+        default: 'default'
       overwrite:
         description: 'Overwrite existing rules in Kibana'
         type: boolean
@@ -52,7 +52,7 @@ jobs:
         if [[ "${{ github.event_name }}" == "push" ]]; then
           echo "Trigger: PR Merge detected. Enforcing production deployment."
           FLAGS="$FLAGS --overwrite"
-          TARGET_SPACE="dac_production" # Hardcode your actual production space name here
+          TARGET_SPACE="default" # Hardcode your actual production space name here
         else
           echo "Trigger: Manual run detected. Using user inputs."
           TARGET_SPACE="${{ inputs.space }}"
