@@ -1,0 +1,45 @@
+[metadata]
+creation_date = "2026/02/23"
+integration = []
+maturity = "development"
+updated_date = "2026/02/23"
+
+[rule]
+actions = []
+author = ["2958980799"]
+description = "ESQL Test for DAC"
+enabled = false
+exceptions_list = []
+false_positives = []
+from = "now-6m"
+interval = "5m"
+language = "esql"
+license = ""
+max_signals = 100
+name = "ESQL-Test Rule"
+references = []
+related_integrations = []
+required_fields = []
+risk_score = 21
+risk_score_mapping = []
+rule_id = "19cb1a89-c6f6-4d1c-ac50-3d32648ca55e"
+setup = ""
+severity = "low"
+severity_mapping = []
+tags = []
+threat = []
+to = "now"
+type = "esql"
+
+query = '''
+FROM logs-* 
+| WHERE data_stream.dataset LIKE "*" AND host.name LIKE "*"
+| KEEP host.name , data_stream.dataset
+| STATS BY host.name
+'''
+
+
+
+[rule.meta]
+kibana_siem_app_url = "https://dac-test-a2b2b4.kb.us-central1.gcp.cloud.es.io/app/security"
+
