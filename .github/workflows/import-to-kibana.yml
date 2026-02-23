@@ -13,6 +13,11 @@ on:
         type: string
         required: false
         default: 'dac_production'
+      overwrite:
+        description: 'Overwrite existing rules in Kibana'
+        type: boolean
+        required: true
+        default: true
 
 jobs:
   import-rules:
@@ -38,7 +43,18 @@ jobs:
 
     - name: Import Rules to Kibana
       run: |
-        FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules --overwrite -e -ac"
+        # Start with the base flags
+        FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules -e -ac"
+        
+        # Logic check: If triggered by a push OR if the manual checkbox is true, add the overwrite flag
+        if [[ "${{ github.event_name }}" == "push" ]] || [[ "${{ inputs.overwrite }}" == "true" ]]; then
+          FLAGS="$FLAGS --overwrite"
+          echo "Action: Overwriting existing rules in Kibana."
+        else
+          echo "Action: Overwrite is DISABLED. Existing Kibana rules will be skipped."
+        fi
+        
+        # Determine target space
         TARGET_SPACE="${{ inputs.space || 'dac_production' }}"
         
         echo "Pushing rules to Kibana space: $TARGET_SPACE"
