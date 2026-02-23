@@ -1,0 +1,6 @@
+- Test rule from VCS to Elastic - Error at line:1,column:23
+Unknown field
+host.name :"test" and hostname :"c345adf728fe" 
+                      ^^^^^^^^
+stack: 9.4.0, beats: 9.3.0, ecs: 9.3.0
+rule: Test rule from VCS to Elastic - 28cff52f-270a-47d5-b6b5-6bca55c8d2a1
