@@ -1,0 +1,55 @@
+[metadata]
+creation_date = "2026/02/22"
+integration = []
+maturity = "development"
+updated_date = "2026/02/22"
+
+[rule]
+actions = []
+author = ["2958980799"]
+description = "Test code rule(From VCS to Elastic)"
+enabled = false
+exceptions_list = []
+false_positives = []
+filters = []
+from = "now-6m"
+index = [
+    "apm-*-transaction*",
+    "auditbeat-*",
+    "endgame-*",
+    "filebeat-*",
+    "logs-*",
+    "winlogbeat-*",
+    "-*elastic-cloud-logs-*",
+]
+interval = "5m"
+language = "kuery"
+license = ""
+max_signals = 100
+name = "Test code rule"
+references = []
+related_integrations = []
+required_fields = []
+risk_score = 21
+risk_score_mapping = []
+rule_id = "f35ccb9b-e5a9-4921-bf6f-5a38d14fac8c"
+setup = ""
+severity = "low"
+severity_mapping = []
+tags = []
+threat = []
+to = "now"
+type = "query"
+
+query = '''
+host.name:*
+'''
+
+
+
+[rule.alert_suppression]
+group_by = ["host.name"]
+missing_fields_strategy = "suppress"
+
+[rule.meta]
+kibana_siem_app_url = "https://dac-test-a2b2b4.kb.us-central1.gcp.cloud.es.io/app/security"
