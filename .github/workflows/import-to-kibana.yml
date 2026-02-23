@@ -1,15 +1,18 @@
 name: "DaC 3: Push Rules to Elastic Security"
 
 on:
+  # 1. THE AUTOMATED TRIGGER (Runs silently on PR Merge)
   push:
     branches:
       - main
     paths:
-      - '**/*.toml'
+      - 'custom/rules/**/*.toml' # Strictly watch this folder
+  
+  # 2. THE MANUAL TRIGGER (Provides the UI options)
   workflow_dispatch:
     inputs:
       space:
-        description: 'Kibana space to use (dev or prod)'
+        description: 'Kibana space to use'
         type: string
         required: false
         default: 'dac_production'
@@ -43,19 +46,20 @@ jobs:
 
     - name: Import Rules to Kibana
       run: |
-        # Start with the base flags
         FLAGS="-d ${{ vars.CUSTOM_RULES_DIR }}/rules -e -ac"
         
-        # Logic check: If triggered by a push OR if the manual checkbox is true, add the overwrite flag
-        if [[ "${{ github.event_name }}" == "push" ]] || [[ "${{ inputs.overwrite }}" == "true" ]]; then
+        # INTELLIGENT ROUTING LOGIC
+        if [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "Trigger: PR Merge detected. Enforcing production deployment."
           FLAGS="$FLAGS --overwrite"
-          echo "Action: Overwriting existing rules in Kibana."
+          TARGET_SPACE="dac_production" # Hardcode your actual production space name here
         else
-          echo "Action: Overwrite is DISABLED. Existing Kibana rules will be skipped."
+          echo "Trigger: Manual run detected. Using user inputs."
+          TARGET_SPACE="${{ inputs.space }}"
+          if [[ "${{ inputs.overwrite }}" == "true" ]]; then
+            FLAGS="$FLAGS --overwrite"
+          fi
         fi
-        
-        # Determine target space
-        TARGET_SPACE="${{ inputs.space || 'dac_production' }}"
         
         echo "Pushing rules to Kibana space: $TARGET_SPACE"
         python -m detection_rules kibana --space "$TARGET_SPACE" import-rules $FLAGS
