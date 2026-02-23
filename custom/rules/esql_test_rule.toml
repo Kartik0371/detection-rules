@@ -7,7 +7,7 @@ updated_date = "2026/02/23"
 [rule]
 actions = []
 author = ["2958980799"]
-description = "ESQL Test for DAC"
+description = "ESQL Test for DAC. This is to check how ESQL queries work with DAC"
 enabled = false
 exceptions_list = []
 false_positives = []
@@ -16,7 +16,7 @@ interval = "5m"
 language = "esql"
 license = ""
 max_signals = 100
-name = "ESQL-Test Rule"
+name = "Dev-ESQL-Test Rule"
 references = []
 related_integrations = []
 required_fields = []
@@ -35,6 +35,7 @@ query = '''
 FROM logs-* 
 | WHERE data_stream.dataset LIKE "*" AND host.name LIKE "*"
 | KEEP host.name , data_stream.dataset
+
 | STATS BY host.name
 '''
 
