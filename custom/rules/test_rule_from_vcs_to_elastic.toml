@@ -1,0 +1,44 @@
+[metadata]
+creation_date = "2026/02/23"
+integration = []
+maturity = "development"
+updated_date = "2026/02/23"
+
+[rule]
+actions = []
+author = ["2958980799"]
+description = "Test rule from VCS to Elastic"
+enabled = false
+exceptions_list = []
+false_positives = []
+filters = []
+from = "now-6m"
+index = ["logs-*"]
+interval = "5m"
+language = "kuery"
+license = ""
+max_signals = 100
+name = "Test rule from VCS to Elastic"
+references = []
+related_integrations = []
+required_fields = []
+risk_score = 21
+risk_score_mapping = []
+rule_id = "28cff52f-270a-47d5-b6b5-6bca55c8d2a1"
+setup = ""
+severity = "low"
+severity_mapping = []
+tags = []
+threat = []
+to = "now"
+type = "query"
+
+query = '''
+host.name :"test" and data_stream.dataset :"elastic_agent.status_change"
+'''
+
+
+
+[rule.meta]
+kibana_siem_app_url = "https://dac-test-a2b2b4.kb.us-central1.gcp.cloud.es.io/app/security"
+
